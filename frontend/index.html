@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Story Game</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1 class="title">Interactive Story Game</h1>
+            <p class="subtitle">Your choices shape the adventure</p>
+        </header>
+
+        <!-- Game Controls -->
+        <div class="controls">
+            <button id="newGameBtn" class="btn btn-primary">New Game</button>
+            <button id="saveGameBtn" class="btn btn-secondary" disabled>Save Game</button>
+            <button id="loadGameBtn" class="btn btn-secondary">Load Game</button>
+        </div>
+
+        <!-- Character Name Input (only shown on game start) -->
+        <div id="characterNameSection" class="character-section" style="display: none;">
+            <label for="characterName" class="character-label">Enter your character's name:</label>
+            <div class="character-input-group">
+                <input type="text" id="characterName" class="character-input" placeholder="Enter name..." maxlength="20">
+                <button id="startGameBtn" class="btn btn-primary">Start Adventure</button>
+            </div>
+        </div>
+
+        <!-- Main Game Area -->
+        <div id="gameArea" class="game-area" style="display: none;">
+            <!-- Story Display -->
+            <div class="story-container">
+                <div id="storyText" class="story-text"></div>
+                <div id="loadingSpinner" class="loading-spinner" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>Weaving your tale...</p>
+                </div>
+            </div>
+
+            <!-- Choice Buttons -->
+            <div class="choices-container">
+                <button id="choice0" class="choice-btn" data-choice="0"></button>
+                <button id="choice1" class="choice-btn" data-choice="1"></button>
+                <button id="choice2" class="choice-btn" data-choice="2"></button>
+            </div>
+
+            <!-- Character Info -->
+            <div class="character-info">
+                <h3>Character Info</h3>
+                <div id="characterDisplay">
+                    <p><strong>Name:</strong> <span id="characterNameDisplay">Player</span></p>
+                    <div id="characterTraits" style="display: none;">
+                        <p><strong>Traits:</strong> <span id="traitsDisplay"></span></p>
+                    </div>
+                    <div id="characterInventory" style="display: none;">
+                        <p><strong>Inventory:</strong> <span id="inventoryDisplay"></span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Save Game Modal -->
+        <div id="saveModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <h3>Save Game</h3>
+                <label for="saveName">Save Name:</label>
+                <input type="text" id="saveName" class="save-input" placeholder="Enter save name..." maxlength="50">
+                <div class="modal-buttons">
+                    <button id="confirmSave" class="btn btn-primary">Save</button>
+                    <button id="cancelSave" class="btn btn-secondary">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Load Game Modal -->
+        <div id="loadModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <h3>Load Game</h3>
+                <div id="savedGamesList" class="saved-games-list">
+                    <p class="loading-text">Loading saved games...</p>
+                </div>
+                <div class="modal-buttons">
+                    <button id="cancelLoad" class="btn btn-secondary">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Error Message -->
+        <div id="errorMessage" class="error-message" style="display: none;"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
