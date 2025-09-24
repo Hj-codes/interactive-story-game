@@ -2,10 +2,7 @@ import requests
 import json
 import re
 from typing import Dict, List, Optional, Tuple
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from config import PERPLEXITY_API_KEY, PERPLEXITY_BASE_URL, STORY_LENGTH_WORDS
+from config import PERPLEXITY_API_KEY, PERPLEXITY_BASE_URL, STORY_LENGTH_WORDS, MAX_CONTEXT_LENGTH
 
 
 class AIStoryService:
@@ -24,7 +21,7 @@ STORY CONTEXT: {context}
 PLAYER'S CHOICE: {player_choice}
 
 Rules:
-- Write 150-250 words continuing the story
+- Write approximately {word_goal} words continuing the story (±50)
 - End with a situation requiring a decision
 - Provide exactly 3 distinct choices
 - Maintain consistency with previous events
@@ -154,8 +151,8 @@ Format response as JSON:
             choices.append(f"Continue exploring (Option {len(choices) + 1})")
         
         return {
-            "story": story[:800],  # Limit story length
-            "choices": choices[:3]  # Limit to 3 choices
+            "story": story[:MAX_CONTEXT_LENGTH],
+            "choices": choices[:3]
         }
     
     def _get_mock_response(self, prompt: str) -> Dict:
@@ -247,9 +244,10 @@ Format response as JSON:
             
             # Format the prompt
             prompt = self.story_prompt_template.format(
-                context=context[-800:],  # Limit context length
+                context=context[-MAX_CONTEXT_LENGTH:],
                 player_choice=player_choice,
-                character_info=char_summary
+                character_info=char_summary,
+                word_goal=STORY_LENGTH_WORDS
             )
             
             # Make API request
@@ -264,8 +262,8 @@ Format response as JSON:
                     choices = choices[:3] if len(choices) > 3 else choices + ["Continue the adventure"] * (3 - len(choices))
                 
                 # Ensure story is reasonable length
-                if len(story) > 1000:
-                    story = story[:997] + "..."
+                if len(story) > MAX_CONTEXT_LENGTH:
+                    story = story[: MAX_CONTEXT_LENGTH - 3] + "..."
                 
                 return story, choices
             else:

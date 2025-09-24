@@ -3,9 +3,6 @@ import json
 import os
 from datetime import datetime
 from typing import Dict, List, Optional, Any
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import DATABASE_PATH
 
 
@@ -119,7 +116,7 @@ class DatabaseManager:
                 current_story,
                 json.dumps(choices_history),
                 json.dumps(current_choices),
-                json.dumps(character_info) if character_info else None,
+                json.dumps(character_info) if character_info is not None else json.dumps({"name": "Player", "traits": [], "inventory": []}),
                 datetime.now().isoformat(),
                 session_id
             )

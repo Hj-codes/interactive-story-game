@@ -2,10 +2,8 @@ import uuid
 import json
 from datetime import datetime
 from typing import Dict, List, Optional, Any
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from database.db_manager import db_manager
+from config import MAX_CONTEXT_LENGTH
 
 
 class GameState:
@@ -121,31 +119,48 @@ class GameState:
         }
         self.choices_history.append(choice_entry)
         self.updated_at = datetime.now().isoformat()
+        # Keep current_story aligned with the latest segment
+        self.current_story = story_segment
     
-    def update_story_context(self, max_length: int = 1000):
-        """Update story context, keeping it within the specified length."""
-        # Combine all story segments
-        full_story = self.current_story
-        for entry in self.choices_history:
-            full_story += " " + entry.get('story_segment', '')
-        
-        # Trim to max length if needed
-        if len(full_story) > max_length:
-            # Try to cut at sentence boundaries
-            sentences = full_story.split('. ')
+    def update_story_context(self, max_length: int = MAX_CONTEXT_LENGTH):
+        """Update rolling story context without duplicating the latest segment.
+
+        The latest generated segment is stored both as `current_story` and as the
+        last element of `choices_history`. To avoid duplication, build context
+        primarily from history segments and only include `current_story` when
+        it's not already the most recent history entry (e.g., initial state).
+        """
+        segments: List[str] = []
+        if not self.choices_history:
+            # Initial state: no history yet, use current_story only
+            if self.current_story:
+                segments.append(self.current_story)
+        else:
+            last_segment = self.choices_history[-1].get('story_segment', '').strip()
+            # Include current_story only if it differs from the last history segment
+            if self.current_story and self.current_story.strip() != last_segment:
+                segments.append(self.current_story)
+            # Append all history segments in order
+            for entry in self.choices_history:
+                seg = entry.get('story_segment', '')
+                if seg:
+                    segments.append(seg)
+
+        full_context = " ".join(segments).strip()
+
+        if len(full_context) > max_length:
+            # Prefer trimming on sentence boundaries from the end
+            sentences = full_context.split('. ')
             trimmed_story = ""
-            
-            # Build story from the end, keeping recent content
             for sentence in reversed(sentences):
-                test_story = sentence + '. ' + trimmed_story
+                test_story = (sentence + '. ' + trimmed_story).strip()
                 if len(test_story) <= max_length:
                     trimmed_story = test_story
                 else:
                     break
-            
-            self.story_context = trimmed_story.strip()
+            self.story_context = trimmed_story.strip() if trimmed_story else full_context[-max_length:]
         else:
-            self.story_context = full_story
+            self.story_context = full_context
     
     def update_character_trait(self, trait: str):
         """Add a character trait if it doesn't already exist."""
@@ -186,19 +201,16 @@ class GameState:
             return None
     
     def get_recent_context(self, num_choices: int = 3) -> str:
-        """Get recent story context for AI prompts."""
-        context_parts = [self.current_story]
-        
-        # Add recent choices and their outcomes
-        recent_choices = self.choices_history[-num_choices:] if self.choices_history else []
-        
-        for entry in recent_choices:
-            choice = entry.get('choice', '')
-            story = entry.get('story_segment', '')
-            context_parts.append(f"Player chose: {choice}")
-            context_parts.append(story)
-        
-        return " ".join(context_parts)
+        """Get recent story context for AI prompts without duplication.
+
+        Returns the rolling `story_context` trimmed to the configured maximum
+        length. The `num_choices` parameter is retained for compatibility but
+        no longer used to append duplicate segments.
+        """
+        base = self.story_context or self.current_story or ""
+        if not base:
+            return ""
+        return base[-MAX_CONTEXT_LENGTH:] if len(base) > MAX_CONTEXT_LENGTH else base
 
 
 class SavedGame:

@@ -19,6 +19,7 @@
             <button id="newGameBtn" class="btn btn-primary">New Game</button>
             <button id="saveGameBtn" class="btn btn-secondary" disabled>Save Game</button>
             <button id="loadGameBtn" class="btn btn-secondary">Load Game</button>
+            <button id="toggleHistoryBtn" class="btn btn-secondary" disabled>History</button>
         </div>
 
         <!-- Character Name Input (only shown on game start) -->
@@ -59,6 +60,14 @@
                     <div id="characterInventory" style="display: none;">
                         <p><strong>Inventory:</strong> <span id="inventoryDisplay"></span></p>
                     </div>
+                </div>
+            </div>
+
+            <!-- History Panel -->
+            <div id="historyPanel" class="history-panel" style="display: none;">
+                <h3>Story History</h3>
+                <div id="historyList" class="history-list">
+                    <p class="loading-text">No history yet</p>
                 </div>
             </div>
         </div>

@@ -1,7 +1,4 @@
 from flask import Blueprint, request, jsonify
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from services.ai_service import ai_service
 from models.game_state import GameState
 
@@ -80,6 +77,8 @@ def get_story_context(session_id):
         game_state = GameState.load_from_database(session_id)
         
         if game_state:
+            # Ensure context is refreshed based on latest state
+            game_state.update_story_context()
             context = game_state.get_recent_context()
             return jsonify({
                 'success': True,

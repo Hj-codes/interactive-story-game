@@ -327,6 +327,39 @@ body {
     padding: 20px;
 }
 
+/* History Panel */
+.history-panel {
+    background: #fff7e6;
+    border-radius: 15px;
+    padding: 25px;
+    border-left: 5px solid #f39c12;
+    margin-top: 20px;
+}
+
+.history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.history-item {
+    background: white;
+    border: 1px solid #eee;
+    border-radius: 10px;
+    padding: 12px 15px;
+}
+
+.history-item .choice {
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 6px;
+}
+
+.history-item .segment {
+    color: #555;
+}
+
 /* Error Message */
 .error-message {
     background: #f8d7da;

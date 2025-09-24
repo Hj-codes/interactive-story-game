@@ -1,7 +1,4 @@
 from flask import Blueprint, request, jsonify
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from models.game_state import GameState
 from services.ai_service import ai_service
 from database.db_manager import db_manager

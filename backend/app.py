@@ -3,9 +3,10 @@ from flask_cors import CORS
 from routes.game import game_bp
 from routes.story import story_bp
 from database.db_manager import init_database
-from config import DEBUG
+from config import DEBUG, SECRET_KEY
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = SECRET_KEY
 CORS(app)
 
 # Register blueprints

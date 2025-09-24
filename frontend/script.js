@@ -7,7 +7,7 @@ class StoryGame {
         
         this.initializeElements();
         this.attachEventListeners();
-        this.showNewGamePrompt();
+        this.restoreSessionOrPrompt();
     }
     
     initializeElements() {
@@ -15,6 +15,7 @@ class StoryGame {
         this.newGameBtn = document.getElementById('newGameBtn');
         this.saveGameBtn = document.getElementById('saveGameBtn');
         this.loadGameBtn = document.getElementById('loadGameBtn');
+        this.toggleHistoryBtn = document.getElementById('toggleHistoryBtn');
         
         // Character setup
         this.characterNameSection = document.getElementById('characterNameSection');
@@ -25,6 +26,7 @@ class StoryGame {
         this.gameArea = document.getElementById('gameArea');
         this.storyText = document.getElementById('storyText');
         this.loadingSpinner = document.getElementById('loadingSpinner');
+        this.storyText.setAttribute('aria-live', 'polite');
         
         // Choice buttons
         this.choiceButtons = [
@@ -48,6 +50,10 @@ class StoryGame {
         this.cancelSaveBtn = document.getElementById('cancelSave');
         this.cancelLoadBtn = document.getElementById('cancelLoad');
         this.savedGamesList = document.getElementById('savedGamesList');
+
+        // History
+        this.historyPanel = document.getElementById('historyPanel');
+        this.historyList = document.getElementById('historyList');
         
         // Error display
         this.errorMessage = document.getElementById('errorMessage');
@@ -58,6 +64,7 @@ class StoryGame {
         this.newGameBtn.addEventListener('click', () => this.showNewGamePrompt());
         this.saveGameBtn.addEventListener('click', () => this.showSaveModal());
         this.loadGameBtn.addEventListener('click', () => this.showLoadModal());
+        this.toggleHistoryBtn.addEventListener('click', () => this.toggleHistory());
         
         // Character setup
         this.startGameBtn.addEventListener('click', () => this.startNewGame());
@@ -68,6 +75,19 @@ class StoryGame {
         // Choice buttons
         this.choiceButtons.forEach((btn, index) => {
             btn.addEventListener('click', () => this.makeChoice(index));
+        });
+
+        // Keyboard shortcuts 1/2/3
+        document.addEventListener('keydown', (e) => {
+            if (this.isLoading || !this.currentSessionId) return;
+            const keyToIndex = { '1': 0, '2': 1, '3': 2 };
+            if (keyToIndex.hasOwnProperty(e.key)) {
+                const idx = keyToIndex[e.key];
+                const btn = this.choiceButtons[idx];
+                if (btn && btn.style.display !== 'none' && !btn.disabled) {
+                    this.makeChoice(idx);
+                }
+            }
         });
         
         // Save modal
@@ -96,7 +116,34 @@ class StoryGame {
         this.characterNameInput.value = '';
         this.characterNameInput.focus();
         this.saveGameBtn.disabled = true;
+        this.toggleHistoryBtn.disabled = true;
         this.hideError();
+    }
+
+    async restoreSessionOrPrompt() {
+        const storedSession = localStorage.getItem('session_id');
+        if (!storedSession) {
+            this.showNewGamePrompt();
+            return;
+        }
+        try {
+            const res = await fetch(`${this.apiBaseUrl}/game/state/${storedSession}`);
+            const data = await res.json();
+            if (data.success) {
+                this.currentSessionId = data.session_id;
+                this.updateGameDisplay(data.current_story, data.choices, data.character_info);
+                this.characterNameSection.style.display = 'none';
+                this.gameArea.style.display = 'block';
+                this.saveGameBtn.disabled = false;
+                this.toggleHistoryBtn.disabled = false;
+                // Load history lazily
+                this.loadHistory();
+            } else {
+                this.showNewGamePrompt();
+            }
+        } catch (e) {
+            this.showNewGamePrompt();
+        }
     }
     
     async startNewGame() {
@@ -120,10 +167,13 @@ class StoryGame {
             
             if (data.success) {
                 this.currentSessionId = data.session_id;
+                localStorage.setItem('session_id', this.currentSessionId);
                 this.updateGameDisplay(data.current_story, data.choices, data.character_info);
                 this.characterNameSection.style.display = 'none';
                 this.gameArea.style.display = 'block';
                 this.saveGameBtn.disabled = false;
+                this.toggleHistoryBtn.disabled = false;
+                this.loadHistory();
             } else {
                 this.showError(data.error || 'Failed to start game');
             }
@@ -157,6 +207,7 @@ class StoryGame {
             
             if (data.success) {
                 this.updateGameDisplay(data.story, data.choices, data.character_info);
+                this.loadHistory();
             } else {
                 this.showError(data.error || 'Failed to process choice');
                 this.enableChoices();
@@ -271,12 +322,15 @@ class StoryGame {
             
             if (data.success) {
                 this.currentSessionId = data.session_id;
+                localStorage.setItem('session_id', this.currentSessionId);
                 this.updateGameDisplay(data.current_story, data.choices, data.character_info);
                 this.characterNameSection.style.display = 'none';
                 this.gameArea.style.display = 'block';
                 this.saveGameBtn.disabled = false;
+                this.toggleHistoryBtn.disabled = false;
                 this.hideLoadModal();
                 this.showSuccess('Game loaded successfully!');
+                this.loadHistory();
             } else {
                 this.showError(data.error || 'Failed to load game');
             }
@@ -316,6 +370,49 @@ class StoryGame {
         
         // Scroll to top of story
         this.storyText.scrollTop = 0;
+    }
+
+    async loadHistory() {
+        if (!this.currentSessionId) return;
+        try {
+            const res = await fetch(`${this.apiBaseUrl}/story/history/${this.currentSessionId}`);
+            const data = await res.json();
+            if (data.success) {
+                this.renderHistory(data.choices_history);
+            }
+        } catch (e) {
+            // ignore
+        }
+    }
+
+    renderHistory(entries) {
+        if (!entries || entries.length === 0) {
+            this.historyList.innerHTML = '<p class="loading-text">No history yet</p>';
+            return;
+        }
+        this.historyList.innerHTML = '';
+        entries.forEach((entry) => {
+            const item = document.createElement('div');
+            item.className = 'history-item';
+            const choice = document.createElement('div');
+            choice.className = 'choice';
+            choice.textContent = `Choice: ${entry.choice}`;
+            const seg = document.createElement('div');
+            seg.className = 'segment';
+            seg.textContent = entry.story_segment;
+            item.appendChild(choice);
+            item.appendChild(seg);
+            this.historyList.appendChild(item);
+        });
+    }
+
+    toggleHistory() {
+        if (this.historyPanel.style.display === 'none') {
+            this.historyPanel.style.display = 'block';
+            this.loadHistory();
+        } else {
+            this.historyPanel.style.display = 'none';
+        }
     }
     
     updateCharacterDisplay(characterInfo) {
