@@ -13,6 +13,7 @@ import { HistoryPanel } from '@/modules/ui/HistoryPanel'
 import { SaveDialog } from '@/modules/ui/SaveDialog'
 import { LoadDialog } from '@/modules/ui/LoadDialog'
 import { Toast, ToastProvider, useToast } from '@/modules/ui/Toast'
+import { NarrationPlayer } from '@/modules/ui/NarrationPlayer'
 
 export function App() {
   const [sessionId, setSessionId] = useState<string | null>(null)
@@ -171,6 +172,7 @@ export function App() {
                 <div className="lg:col-span-2">
                   <StoryArea story={story} isLoading={isLoading} />
                   <Choices choices={choices} disabled={isLoading} onChoose={onMakeChoice} />
+                  <NarrationPlayer story={story} />
                 </div>
                 <div className="lg:col-span-1">
                   <CharacterInfoCard character={character} />

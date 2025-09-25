@@ -1,4 +1,4 @@
-import { apiGet, apiPost } from './client'
+import { apiGet, apiPost, apiPostBlob } from './client'
 import type {
   StartGameResponse,
   MakeChoiceResponse,
@@ -32,6 +32,9 @@ export const GameAPI = {
   },
   history(session_id: string) {
     return apiGet<HistoryResponse>(`/story/history/${session_id}`)
+  },
+  narrate(text: string, opts?: { speaker?: string; speaker_wav?: string }) {
+    return apiPostBlob('/narrate', { text, ...opts })
   },
 }
 

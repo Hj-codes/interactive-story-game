@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from routes.game import game_bp
 from routes.story import story_bp
+from routes.narrate import narrate_bp
 from database.db_manager import init_database
 from config import DEBUG, SECRET_KEY
 
@@ -12,6 +13,7 @@ CORS(app)
 # Register blueprints
 app.register_blueprint(game_bp, url_prefix='/api/game')
 app.register_blueprint(story_bp, url_prefix='/api/story')
+app.register_blueprint(narrate_bp, url_prefix='/api')
 
 
 @app.route('/')
@@ -22,7 +24,8 @@ def index():
         'version': '1.0.0',
         'endpoints': {
             'game': '/api/game/*',
-            'story': '/api/story/*'
+            'story': '/api/story/*',
+            'narrate': '/api/narrate'
         }
     })
 
@@ -87,6 +90,7 @@ if __name__ == '__main__':
     print("  - POST /api/game/load/<save_id> - Load game")
     print("  - GET /api/game/saves - List saved games")
     print("  - POST /api/story/generate - Generate story")
+    print("  - POST /api/narrate - Generate narration audio")
     print("  - GET /api/health - Health check")
     
     app.run(debug=DEBUG, host='0.0.0.0', port=5000)
