@@ -28,10 +28,11 @@ def narrate():
                 'error': 'text is required'
             }), 400
 
-        # Force English-only usage for non-multilingual default model
-        language = None
+        # Default to English for multilingual models; TTS layer will fallback if not supported
+        language = data.get('language') or 'en'
         speaker = data.get('speaker')
         speaker_wav = data.get('speaker_wav')
+        speaker_profile = data.get('speaker_profile') or 'default'
 
         # Synthesize (with on-disk caching inside synthesizer)
         audio_path, mime = tts_synth.synthesize(
@@ -39,6 +40,7 @@ def narrate():
             language=language,
             speaker_wav=speaker_wav,
             speaker=speaker,
+            speaker_profile=speaker_profile,
         )
 
         # Serve the generated file; allow browsers to start playback ASAP
