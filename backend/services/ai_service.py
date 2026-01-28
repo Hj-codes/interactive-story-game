@@ -29,6 +29,7 @@ Rules:
 - Use vivid descriptions and compelling narrative
 - Create meaningful consequences for player choices
 - Include character development opportunities
+- Generate a concise image prompt that visually captures the current scene's mood and setting
 
 Character Information:
 {character_info}
@@ -40,7 +41,8 @@ Format response as JSON:
     "First choice option",
     "Second choice option", 
     "Third choice option"
-  ]
+  ],
+  "image_prompt": "A vivid, artistic description of the scene for image generation, focusing on atmosphere and key visual elements"
 }}"""
 
     def _make_api_request(self, prompt: str) -> Optional[Dict]:
@@ -152,7 +154,8 @@ Format response as JSON:
         
         return {
             "story": story[:MAX_CONTEXT_LENGTH],
-            "choices": choices[:3]
+            "choices": choices[:3],
+            "image_prompt": "A mystical fantasy scene with ambient lighting and ethereal atmosphere"
         }
     
     def _get_mock_response(self, prompt: str) -> Dict:
@@ -168,7 +171,8 @@ Format response as JSON:
                     "Approach the creature slowly with open hands",
                     "Follow the glowing fungi deeper into the forest",
                     "Call out softly to see if the creature responds"
-                ]
+                ],
+                "image_prompt": "A dark enchanted forest with ancient trees, glowing blue bioluminescent fungi on tree trunks, a small furry creature with luminescent eyes peering from bushes, mystical twilight atmosphere, fantasy digital art"
             },
             "middle": {
                 "story": "You follow the mesmerizing light, feeling an inexplicable pull toward its warm glow. As you get closer, the light reveals itself to be emanating from a magnificent crystal formation rising from the ground like a natural spire. The crystal hums with energy, and you can feel its power resonating through your entire body. Ancient runes are carved around its base, glowing in rhythm with the crystal's pulse. You notice three pedestals arranged around the crystal, each holding a different colored gem - ruby red, sapphire blue, and emerald green. The air shimmers with magical energy.",
@@ -176,7 +180,8 @@ Format response as JSON:
                     "Touch the crystal spire directly",
                     "Examine the ancient runes more closely", 
                     "Pick up one of the colored gems from the pedestals"
-                ]
+                ],
+                "image_prompt": "A magnificent glowing crystal spire rising from the ground, surrounded by three pedestals with ruby, sapphire and emerald gems, ancient glowing runes carved at the base, magical shimmering atmosphere, fantasy concept art"
             },
             "mountain": {
                 "story": "The rocky mountain path proves more challenging than expected, but you press on, driven by curiosity about what lies ahead. The air grows thinner as you climb, and the view below becomes breathtaking. Halfway up, you discover the entrance to a cave hidden behind a waterfall. The sound of rushing water is deafening, but you can make out strange symbols carved into the rock around the cave entrance. The symbols seem to glow faintly in the mist. Inside the cave, you glimpse what appears to be ancient architecture - this is no natural formation, but rather some kind of temple or sanctuary built into the mountain itself.",
@@ -184,7 +189,8 @@ Format response as JSON:
                     "Enter the cave behind the waterfall",
                     "Continue climbing to reach the mountain peak",
                     "Study the glowing symbols before proceeding"
-                ]
+                ],
+                "image_prompt": "A dramatic mountain path with a hidden cave behind a cascading waterfall, glowing ancient symbols carved in rock, misty atmosphere with ancient temple architecture visible inside, epic fantasy landscape"
             }
         }
         
@@ -204,7 +210,8 @@ Format response as JSON:
                     "Take the path that leads toward the strange sounds",
                     "Choose the quieter route and proceed with caution",
                     "Stop and listen carefully before making your next move"
-                ]
+                ],
+                "image_prompt": "A mystical crossroads in a fantasy realm with diverging paths, ambient mist, and soft ethereal lighting, digital art style"
             }
     
     def _get_fallback_response(self) -> Dict:
@@ -215,11 +222,12 @@ Format response as JSON:
                 "Explore the area more thoroughly",
                 "Look for clues about what happened here",
                 "Continue forward with determination"
-            ]
+            ],
+            "image_prompt": "A mysterious fantasy landscape with ancient ruins and magical aura, cinematic lighting, digital art"
         }
     
     def generate_story_continuation(self, context: str, player_choice: str, 
-                                  character_info: Dict = None) -> Tuple[str, List[str]]:
+                                  character_info: Dict = None) -> Tuple[str, List[str], str]:
         """
         Generate story continuation based on context and player choice.
         
@@ -229,7 +237,7 @@ Format response as JSON:
             character_info: Information about the player character
         
         Returns:
-            Tuple of (story_text, list_of_choices)
+            Tuple of (story_text, list_of_choices, image_prompt)
         """
         try:
             # Prepare character information
@@ -256,6 +264,7 @@ Format response as JSON:
             if response and 'story' in response and 'choices' in response:
                 story = response['story']
                 choices = response['choices']
+                image_prompt = response.get('image_prompt', 'A mystical fantasy scene with magical atmosphere')
                 
                 # Validate and clean up response
                 if len(choices) != 3:
@@ -265,16 +274,16 @@ Format response as JSON:
                 if len(story) > MAX_CONTEXT_LENGTH:
                     story = story[: MAX_CONTEXT_LENGTH - 3] + "..."
                 
-                return story, choices
+                return story, choices, image_prompt
             else:
                 # Use fallback response
                 fallback = self._get_fallback_response()
-                return fallback['story'], fallback['choices']
+                return fallback['story'], fallback['choices'], fallback['image_prompt']
                 
         except Exception as e:
             print(f"Error in story generation: {e}")
             fallback = self._get_fallback_response()
-            return fallback['story'], fallback['choices']
+            return fallback['story'], fallback['choices'], fallback['image_prompt']
     
     def validate_response(self, response: Dict) -> bool:
         """Validate that the AI response has the required structure."""

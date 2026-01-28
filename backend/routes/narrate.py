@@ -1,6 +1,6 @@
 import os
 from flask import Blueprint, request, jsonify, send_file, make_response
-from services.tts_service import tts_synth
+from services.qwen_tts_service import qwen_tts_synth
 
 
 narrate_bp = Blueprint('narrate', __name__)
@@ -8,13 +8,13 @@ narrate_bp = Blueprint('narrate', __name__)
 
 @narrate_bp.route('/narrate', methods=['POST'])
 def narrate():
-    """Generate narration audio for provided story text.
+    """Generate narration audio for provided story text using Qwen3 TTS.
 
     Request JSON body:
       - text: string (required)
-      - language: string (optional, e.g., 'en')
-      - speaker: string (optional, model-specific)
-      - speaker_wav: string (optional, path to reference voice on server)
+      - language: string (optional, e.g., 'English', 'Chinese')
+      - speaker: string (optional, default: 'Uncle Fu')
+      - instruct: string (optional, emotion/tone instruction)
 
     Response: audio file (audio/wav) with caching.
     """
@@ -28,19 +28,20 @@ def narrate():
                 'error': 'text is required'
             }), 400
 
-        # Default to English for multilingual models; TTS layer will fallback if not supported
-        language = data.get('language') or 'en'
-        speaker = data.get('speaker')
-        speaker_wav = data.get('speaker_wav')
-        speaker_profile = data.get('speaker_profile') or 'default'
+        # Default to English for storytelling; Qwen3 supports auto-detection too
+        language = data.get('language') or 'English'
+        speaker = data.get('speaker') or 'uncle_fu'
+        
+        # Default storyteller tone: relaxed, narrative voice
+        default_instruct = "Speak in a relaxed, warm storyteller tone. Use a calm and engaging narrative voice, as if telling a captivating story by a fireside."
+        instruct = data.get('instruct') or default_instruct
 
         # Synthesize (with on-disk caching inside synthesizer)
-        audio_path, mime = tts_synth.synthesize(
+        audio_path, mime = qwen_tts_synth.synthesize(
             text=text,
             language=language,
-            speaker_wav=speaker_wav,
             speaker=speaker,
-            speaker_profile=speaker_profile,
+            instruct=instruct,
         )
 
         # Serve the generated file; allow browsers to start playback ASAP

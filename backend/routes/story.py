@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from services.ai_service import ai_service
+from services.image_service import image_service
 from models.game_state import GameState
 
 story_bp = Blueprint('story', __name__)
@@ -27,14 +28,18 @@ def generate_story():
             }), 400
         
         # Generate story continuation
-        story, choices = ai_service.generate_story_continuation(
+        story, choices, image_prompt = ai_service.generate_story_continuation(
             context, player_choice, character_info
         )
+        
+        # Generate image based on the scene
+        image_base64 = image_service.generate_image(image_prompt)
         
         return jsonify({
             'success': True,
             'story': story,
-            'choices': choices
+            'choices': choices,
+            'image': image_base64
         }), 200
         
     except Exception as e:

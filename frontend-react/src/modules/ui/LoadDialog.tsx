@@ -1,9 +1,21 @@
-import * as Dialog from '@radix-ui/react-dialog'
 import { useEffect, useState } from 'react'
 import { GameAPI } from '@/api/game'
 import type { SavedGameSummary } from '@/types'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { FolderOpen, Loader2, FileX } from 'lucide-react'
 
-export function LoadDialog({ open, onOpenChange, onSelect, sessionId }: { open: boolean; onOpenChange: (v: boolean) => void; onSelect: (id: string) => void; sessionId?: string }) {
+export function LoadDialog({ open, onOpenChange, onSelect, sessionId }: {
+  open: boolean
+  onOpenChange: (v: boolean) => void
+  onSelect: (id: string) => void
+  sessionId?: string
+}) {
   const [saves, setSaves] = useState<SavedGameSummary[] | null>(null)
 
   useEffect(() => {
@@ -15,34 +27,51 @@ export function LoadDialog({ open, onOpenChange, onSelect, sessionId }: { open: 
   }, [open, sessionId])
 
   return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-[100] bg-black/70" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-[101] w-[92%] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white p-6 shadow-2xl">
-          <Dialog.Title className="text-center text-xl font-semibold text-slate-800">Load Game</Dialog.Title>
-          <div className="mt-5 max-h-[60vh] overflow-y-auto">
-            {saves === null && <p className="py-6 text-center italic text-slate-500">Loading saved games...</p>}
-            {saves?.length === 0 && <p className="py-6 text-center italic text-slate-500">No saved games found</p>}
-            {saves?.map((s) => (
-              <button
-                key={s.id}
-                className="mb-2 w-full rounded-lg border-2 border-slate-200 bg-white p-4 text-left transition hover:border-indigo-400 hover:bg-slate-50"
-                onClick={() => onSelect(s.id)}
-              >
-                <div className="font-semibold text-slate-800">{s.save_name}</div>
-                <div className="text-sm text-slate-500">{new Date(s.saved_at).toLocaleString()}</div>
-              </button>
-            ))}
-          </div>
-          <div className="mt-4 flex justify-center">
-            <Dialog.Close asChild>
-              <button className="rounded-lg border-2 border-slate-200 bg-white px-5 py-2.5 text-slate-900 shadow-sm">Cancel</button>
-            </Dialog.Close>
-          </div>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="glass border-gray-800 sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="font-serif text-lg text-[--fantasy-gold] uppercase tracking-wider flex items-center gap-2">
+            <FolderOpen className="w-5 h-5" />
+            Load Game
+          </DialogTitle>
+        </DialogHeader>
+
+        <ScrollArea className="mt-4 max-h-[50vh]">
+          {saves === null ? (
+            <div className="flex flex-col items-center justify-center py-8 gap-2">
+              <Loader2 className="w-6 h-6 animate-spin text-[--fantasy-gold]" />
+              <p className="text-sm text-gray-500">Loading saves...</p>
+            </div>
+          ) : saves.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 gap-2">
+              <FileX className="w-8 h-8 text-gray-600" />
+              <p className="text-sm text-gray-500">No saved games found</p>
+            </div>
+          ) : (
+            <div className="space-y-2 pr-2">
+              {saves.map((s) => (
+                <button
+                  key={s.id}
+                  className="w-full p-3 text-left rounded-lg border border-gray-700 bg-black/30 hover:border-[--fantasy-gold] transition-colors"
+                  onClick={() => onSelect(s.id)}
+                >
+                  <div className="font-serif text-white">{s.save_name}</div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    {new Date(s.saved_at).toLocaleString()}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </ScrollArea>
+
+        <button
+          className="w-full mt-4 py-2.5 border border-gray-700 text-gray-400 rounded-lg text-sm hover:bg-gray-800 transition-colors"
+          onClick={() => onOpenChange(false)}
+        >
+          Cancel
+        </button>
+      </DialogContent>
+    </Dialog>
   )
 }
-
-

@@ -4,7 +4,6 @@ import { GameAPI } from '@/api/game'
 import type { CharacterInfo, ChoiceHistoryEntry } from '@/types'
 import { sessionStorageKey } from '@/lib/utils'
 import { Header } from '@/modules/ui/Header'
-import { Controls } from '@/modules/ui/Controls'
 import { NamePrompt } from '@/modules/ui/NamePrompt'
 import { StoryArea } from '@/modules/ui/StoryArea'
 import { Choices } from '@/modules/ui/Choices'
@@ -25,6 +24,8 @@ export function App() {
   const [showHistory, setShowHistory] = useState(false)
   const [saveOpen, setSaveOpen] = useState(false)
   const [loadOpen, setLoadOpen] = useState(false)
+  const [chapterCount, setChapterCount] = useState(0)
+  const [sceneImage, setSceneImage] = useState<string | null>(null)
 
   const canInteract = useMemo(() => !!sessionId && !isLoading, [sessionId, isLoading])
   const { toasts, push } = useToast()
@@ -39,12 +40,16 @@ export function App() {
           setStory(data.current_story)
           setChoices(data.choices)
           setCharacter(data.character_info)
+          setSceneImage(data.image || null)
           GameAPI.history(data.session_id).then((h) => {
-            if (h.success) setHistory(h.choices_history)
+            if (h.success) {
+              setHistory(h.choices_history)
+              setChapterCount(h.choices_history.length)
+            }
           })
         }
       })
-      .catch(() => {})
+      .catch(() => { })
   }, [])
 
   useEffect(() => {
@@ -71,6 +76,8 @@ export function App() {
         setStory(data.current_story)
         setChoices(data.choices)
         setCharacter(data.character_info)
+        setSceneImage(data.image || null)
+        setChapterCount(0)
         const h = await GameAPI.history(data.session_id)
         if (h.success) setHistory(h.choices_history)
       } else {
@@ -92,10 +99,14 @@ export function App() {
         setStory(data.story)
         setChoices(data.choices)
         setCharacter(data.character_info)
+        setSceneImage(data.image || null)
         const h = await GameAPI.history(sessionId)
-        if (h.success) setHistory(h.choices_history)
+        if (h.success) {
+          setHistory(h.choices_history)
+          setChapterCount(h.choices_history.length)
+        }
       } else {
-        push({ title: data['error'] ?? 'Failed to process choice', variant: 'destructive' })
+        push({ title: data.error ?? 'Failed to process choice', variant: 'destructive' })
       }
     } catch {
       push({ title: 'Unable to connect to server', variant: 'destructive' })
@@ -129,8 +140,12 @@ export function App() {
         setStory(data.current_story)
         setChoices(data.choices)
         setCharacter(data.character_info)
+        setSceneImage(data.image || null)
         const h = await GameAPI.history(data.session_id)
-        if (h.success) setHistory(h.choices_history)
+        if (h.success) {
+          setHistory(h.choices_history)
+          setChapterCount(h.choices_history.length)
+        }
         push({ title: 'Game loaded successfully' })
         setLoadOpen(false)
       } else {
@@ -148,51 +163,92 @@ export function App() {
     setStory('')
     setChoices([])
     setHistory([])
+    setChapterCount(0)
+    setSceneImage(null)
   }
 
   return (
     <ToastProvider>
-      <div className="min-h-screen">
-        <div className="container mx-auto my-6 rounded-2xl bg-white/90 shadow-2xl backdrop-blur">
-          <Header />
-          <Controls
-            canSave={!!sessionId}
-            canToggleHistory={!!sessionId}
+      <div className="relative min-h-screen overflow-y-auto">
+        {/* Full-screen background */}
+        <div className="fixed inset-0 z-0">
+          <img
+            src="/bg-fantasy.png"
+            alt="Fantasy Background"
+            className="w-full h-full object-cover opacity-50"
+          />
+          <div className="absolute inset-0 bg-overlay pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-full h-1/4 bg-mist pointer-events-none" />
+        </div>
+
+        {/* Main content */}
+        <div className="relative z-10 min-h-screen">
+          <Header
+            chapterCount={chapterCount}
             onNew={onNew}
             onSave={() => setSaveOpen(true)}
             onLoad={() => setLoadOpen(true)}
             onToggleHistory={() => setShowHistory((v) => !v)}
+            canSave={!!sessionId}
+            showHistory={showHistory}
           />
 
-          {!sessionId ? (
-            <NamePrompt disabled={isLoading} onStart={onStart} />
-          ) : (
-            <div className="px-6 pb-10">
-              <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-                <div className="lg:col-span-2">
-                  <StoryArea story={story} isLoading={isLoading} />
-                  <Choices choices={choices} disabled={isLoading} onChoose={onMakeChoice} />
-                  <NarrationPlayer story={story} />
-                </div>
-                <div className="lg:col-span-1">
-                  <CharacterInfoCard character={character} />
-                  <AnimatePresence initial={false}>
+          <main className="py-4 pb-8">
+            <AnimatePresence mode="wait">
+              {!sessionId ? (
+                <NamePrompt key="name" disabled={isLoading} onStart={onStart} />
+              ) : (
+                <motion.div
+                  key="game"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="flex flex-col gap-4"
+                >
+                  {/* Story - takes available space but limited */}
+                  <div className="flex-shrink-0">
+                    <StoryArea story={story} isLoading={isLoading} image={sceneImage} />
+                  </div>
+
+                  {/* Choice cards */}
+                  <div className="flex-shrink-0">
+                    <Choices
+                      choices={choices}
+                      disabled={isLoading}
+                      onChoose={onMakeChoice}
+                    />
+                  </div>
+
+                  {/* Bottom bar: Character + Narration */}
+                  <div className="flex-shrink-0 mt-4 px-4">
+                    <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <CharacterInfoCard character={character} />
+                      <NarrationPlayer story={story} />
+                    </div>
+                  </div>
+
+                  {/* History panel (collapsible) */}
+                  <AnimatePresence>
                     {showHistory && (
                       <motion.div
-                        initial={{ opacity: 0, y: -6 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -6 }}
-                        transition={{ duration: 0.2 }}
-                        className="mt-6"
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="flex-shrink-0 mt-4 px-4"
                       >
-                        <HistoryPanel entries={history} onRefresh={() => sessionId && GameAPI.history(sessionId).then(h => h.success && setHistory(h.choices_history))} />
+                        <div className="max-w-4xl mx-auto">
+                          <HistoryPanel
+                            entries={history}
+                            onRefresh={() => sessionId && GameAPI.history(sessionId).then(h => h.success && setHistory(h.choices_history))}
+                          />
+                        </div>
                       </motion.div>
                     )}
                   </AnimatePresence>
-                </div>
-              </div>
-            </div>
-          )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </main>
         </div>
 
         <SaveDialog open={saveOpen} onOpenChange={setSaveOpen} onConfirm={onSave} />
@@ -205,5 +261,3 @@ export function App() {
     </ToastProvider>
   )
 }
-
-

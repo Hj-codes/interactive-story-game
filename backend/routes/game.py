@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from models.game_state import GameState
 from services.ai_service import ai_service
+from services.image_service import image_service
 from database.db_manager import db_manager
 import json
 
@@ -28,12 +29,17 @@ def start_game():
             game_state = GameState.load_from_database(game_state.session_id)
             
             if game_state:
+                # Generate a starting image for the first scene
+                starting_image_prompt = "A mystical crossroads at the edge of an enchanted forest, with three diverging paths, one leading to shadowy trees, one towards a mysterious light, and one up a rocky mountain, fantasy digital art, cinematic lighting"
+                starting_image = image_service.generate_image(starting_image_prompt)
+                
                 return jsonify({
                     'success': True,
                     'session_id': game_state.session_id,
                     'current_story': game_state.current_story,
                     'choices': game_state.current_choices,
-                    'character_info': game_state.character_info
+                    'character_info': game_state.character_info,
+                    'image': starting_image
                 }), 200
             else:
                 return jsonify({
@@ -93,9 +99,12 @@ def make_choice():
         
         # Generate story continuation using AI
         context = game_state.get_recent_context()
-        new_story, new_choices = ai_service.generate_story_continuation(
+        new_story, new_choices, image_prompt = ai_service.generate_story_continuation(
             context, selected_choice, game_state.character_info
         )
+        
+        # Generate image based on the scene
+        image_base64 = image_service.generate_image(image_prompt)
         
         # Update game state
         game_state.add_choice_to_history(selected_choice, new_story)
@@ -112,7 +121,8 @@ def make_choice():
                 'story': new_story,
                 'choices': new_choices,
                 'character_info': game_state.character_info,
-                'session_id': session_id
+                'session_id': session_id,
+                'image': image_base64
             }), 200
         else:
             return jsonify({

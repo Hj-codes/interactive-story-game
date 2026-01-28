@@ -17,6 +17,7 @@ export type GameStateResponse = {
   choices: string[]
   character_info: CharacterInfo
   choices_history?: ChoiceHistoryEntry[]
+  image?: string | null
 }
 
 export type StartGameResponse = GameStateResponse
@@ -27,6 +28,8 @@ export type MakeChoiceResponse = {
   choices: string[]
   character_info: CharacterInfo
   session_id: string
+  error?: string
+  image?: string | null
 }
 
 export type SavedGameSummary = {

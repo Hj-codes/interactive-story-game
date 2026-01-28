@@ -1,29 +1,41 @@
 import type { ChoiceHistoryEntry } from '@/types'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Clock } from 'lucide-react'
 
 export function HistoryPanel({ entries, onRefresh }: { entries: ChoiceHistoryEntry[]; onRefresh?: () => void }) {
   return (
-    <div className="rounded-xl border-l-4 border-amber-500 bg-amber-50 p-5">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-slate-800">Story History</h3>
-        {onRefresh && (
-          <button className="rounded-md border border-amber-200 bg-white/60 px-3 py-1 text-sm text-amber-800 hover:bg-white" onClick={onRefresh}>
-            Refresh
-          </button>
-        )}
-      </div>
-      <div className="mt-3 flex max-h-80 flex-col gap-2 overflow-y-auto">
-        {(!entries || entries.length === 0) && (
-          <p className="text-center italic text-slate-500">No history yet</p>
-        )}
-        {entries?.map((e, idx) => (
-          <div key={idx} className="rounded-lg border border-slate-200 bg-white p-3">
-            <div className="font-semibold text-slate-800">Choice: {e.choice}</div>
-            <div className="mt-1 text-slate-600">{e.story_segment}</div>
+    <div className="glass rounded-xl p-5 border border-gray-800">
+      <h3 className="font-serif text-sm font-bold text-[--fantasy-gold] tracking-wider uppercase mb-4 flex items-center gap-2">
+        <Clock className="w-4 h-4" />
+        Journey Log
+      </h3>
+
+      <ScrollArea className="h-48">
+        {(!entries || entries.length === 0) ? (
+          <p className="text-gray-600 text-sm italic text-center py-4">
+            No chapters recorded yet...
+          </p>
+        ) : (
+          <div className="space-y-3 pr-2">
+            {entries.map((entry, idx) => (
+              <div
+                key={idx}
+                className="relative pl-4 pb-3 border-l border-gray-700 last:border-l-0"
+              >
+                {/* Timeline dot */}
+                <div className="absolute left-[-5px] top-0 w-2 h-2 rounded-full bg-[--fantasy-gold]" />
+
+                <p className="text-xs font-serif text-[--fantasy-gold] uppercase tracking-wide mb-1">
+                  Chapter {idx + 1}
+                </p>
+                <p className="text-xs text-gray-400 line-clamp-2">
+                  {entry.choice}
+                </p>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        )}
+      </ScrollArea>
     </div>
   )
 }
-
-
