@@ -297,6 +297,75 @@ Format response as JSON:
             all(isinstance(choice, str) for choice in response['choices'])
         )
 
+    def generate_choices_for_story(self, story_text: str, character_info: Dict = None) -> Tuple[List[str], str]:
+        """
+        Generate choices for a user-provided initial story.
+        
+        Args:
+            story_text: The user's custom starting story
+            character_info: Information about the player character
+            
+        Returns:
+            Tuple of (list_of_choices, image_prompt)
+        """
+        try:
+            char_info = character_info or {"name": "Player", "traits": [], "inventory": []}
+            char_summary = f"Character: {char_info.get('name', 'Player')}"
+            
+            prompt = f"""You are an interactive fiction storyteller. A player has started a story with their own beginning.
+
+STORY START:
+{story_text[:MAX_CONTEXT_LENGTH]}
+
+CHARACTER: {char_summary}
+
+Your task:
+- Read the story beginning provided by the player
+- Generate exactly 3 meaningful choices that the player could make to continue this story
+- Generate a vivid image prompt that captures the scene described in the story
+
+Rules:
+- Choices should be distinct and lead to different story paths
+- Keep choices engaging and consistent with the story's tone
+- The image prompt should visually represent the current scene
+
+Format response as JSON:
+{{
+  "choices": [
+    "First choice option",
+    "Second choice option", 
+    "Third choice option"
+  ],
+  "image_prompt": "A vivid, artistic description of the scene for image generation"
+}}"""
+
+            response = self._make_api_request(prompt)
+            
+            if response and 'choices' in response:
+                choices = response['choices']
+                image_prompt = response.get('image_prompt', 'A mystical fantasy scene with magical atmosphere')
+                
+                # Ensure exactly 3 choices
+                if len(choices) != 3:
+                    choices = choices[:3] if len(choices) > 3 else choices + ["Continue the adventure"] * (3 - len(choices))
+                
+                return choices, image_prompt
+            else:
+                return [
+                    "Explore your surroundings",
+                    "Look for clues about what to do next",
+                    "Continue forward with determination"
+                ], "A mystical fantasy scene with magical atmosphere"
+                
+        except Exception as e:
+            print(f"Error generating choices for story: {e}")
+            return [
+                "Explore your surroundings",
+                "Look for clues about what to do next",
+                "Continue forward with determination"
+            ], "A mystical fantasy scene with magical atmosphere"
+
 
 # Singleton instance
 ai_service = AIStoryService()
+

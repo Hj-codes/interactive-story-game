@@ -11,6 +11,7 @@ import { CharacterInfoCard } from '@/modules/ui/CharacterInfoCard'
 import { HistoryPanel } from '@/modules/ui/HistoryPanel'
 import { SaveDialog } from '@/modules/ui/SaveDialog'
 import { LoadDialog } from '@/modules/ui/LoadDialog'
+import { PlayHistory } from '@/modules/ui/PlayHistory'
 import { Toast, ToastProvider, useToast } from '@/modules/ui/Toast'
 import { NarrationPlayer } from '@/modules/ui/NarrationPlayer'
 
@@ -24,6 +25,7 @@ export function App() {
   const [showHistory, setShowHistory] = useState(false)
   const [saveOpen, setSaveOpen] = useState(false)
   const [loadOpen, setLoadOpen] = useState(false)
+  const [playHistoryOpen, setPlayHistoryOpen] = useState(false)
   const [chapterCount, setChapterCount] = useState(0)
   const [sceneImage, setSceneImage] = useState<string | null>(null)
 
@@ -65,11 +67,11 @@ export function App() {
     return () => window.removeEventListener('keydown', onKey)
   }, [canInteract, choices])
 
-  const onStart = async (name: string) => {
+  const onStart = async (name: string, initialStory?: string) => {
     if (isLoading) return
     setIsLoading(true)
     try {
-      const data = await GameAPI.start(name || 'Player')
+      const data = await GameAPI.start(name || 'Player', initialStory)
       if (data.success) {
         setSessionId(data.session_id)
         localStorage.setItem(sessionStorageKey, data.session_id)
@@ -167,6 +169,33 @@ export function App() {
     setSceneImage(null)
   }
 
+  const onResumeSession = async (sessionId: string) => {
+    setIsLoading(true)
+    try {
+      const data = await GameAPI.getState(sessionId)
+      if (data.success) {
+        setSessionId(data.session_id)
+        localStorage.setItem(sessionStorageKey, data.session_id)
+        setStory(data.current_story)
+        setChoices(data.choices)
+        setCharacter(data.character_info)
+        setSceneImage(data.image || null)
+        const h = await GameAPI.history(data.session_id)
+        if (h.success) {
+          setHistory(h.choices_history)
+          setChapterCount(h.choices_history.length)
+        }
+        push({ title: 'Session resumed' })
+      } else {
+        push({ title: 'Failed to resume session', variant: 'destructive' })
+      }
+    } catch {
+      push({ title: 'Unable to resume session', variant: 'destructive' })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   return (
     <ToastProvider>
       <div className="relative min-h-screen overflow-y-auto">
@@ -188,6 +217,7 @@ export function App() {
             onNew={onNew}
             onSave={() => setSaveOpen(true)}
             onLoad={() => setLoadOpen(true)}
+            onPlayHistory={() => setPlayHistoryOpen(true)}
             onToggleHistory={() => setShowHistory((v) => !v)}
             canSave={!!sessionId}
             showHistory={showHistory}
@@ -253,6 +283,7 @@ export function App() {
 
         <SaveDialog open={saveOpen} onOpenChange={setSaveOpen} onConfirm={onSave} />
         <LoadDialog open={loadOpen} onOpenChange={setLoadOpen} onSelect={onLoad} sessionId={sessionId ?? undefined} />
+        <PlayHistory open={playHistoryOpen} onOpenChange={setPlayHistoryOpen} onSelect={onResumeSession} />
 
         {toasts.map((t) => (
           <Toast key={t.id} {...t} />

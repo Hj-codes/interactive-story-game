@@ -1,16 +1,17 @@
-import { Map, Save, FolderOpen, History, Plus, Settings } from 'lucide-react'
+import { Map, Save, FolderOpen, History, Plus, Settings, Clock } from 'lucide-react'
 
 type Props = {
   chapterCount: number
   onNew: () => void
   onSave: () => void
   onLoad: () => void
+  onPlayHistory: () => void
   onToggleHistory: () => void
   canSave: boolean
   showHistory: boolean
 }
 
-export function Header({ chapterCount, onNew, onSave, onLoad, onToggleHistory, canSave, showHistory }: Props) {
+export function Header({ chapterCount, onNew, onSave, onLoad, onPlayHistory, onToggleHistory, canSave, showHistory }: Props) {
   const progressPercentage = Math.min((chapterCount / 10) * 100, 100)
 
   return (
@@ -44,6 +45,9 @@ export function Header({ chapterCount, onNew, onSave, onLoad, onToggleHistory, c
       <div className="flex items-center gap-1">
         <button onClick={onNew} className="p-2 text-gray-500 hover:text-[--fantasy-gold] transition-colors" title="New Game">
           <Plus className="w-4 h-4" />
+        </button>
+        <button onClick={onPlayHistory} className="p-2 text-gray-500 hover:text-[--fantasy-gold] transition-colors" title="Play History">
+          <Clock className="w-4 h-4" />
         </button>
         <button onClick={onSave} disabled={!canSave} className="p-2 text-gray-500 hover:text-[--fantasy-gold] transition-colors disabled:opacity-40" title="Save">
           <Save className="w-4 h-4" />

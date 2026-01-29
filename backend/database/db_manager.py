@@ -33,18 +33,27 @@ class DatabaseManager:
             conn.commit()
             return cursor.rowcount
     
-    def create_game_session(self, session_id: str, character_info: Dict = None) -> bool:
-        """Create a new game session."""
+    def create_game_session(self, session_id: str, character_info: Dict = None, 
+                            initial_story: str = None, initial_choices: List[str] = None) -> bool:
+        """Create a new game session with optional custom starting story."""
         try:
-            starting_story = ("You wake up in a mysterious place with no memory of how you got there. "
-                            "The air is thick with an otherworldly energy, and three paths stretch before you, "
-                            "each leading into the unknown. Your adventure begins now...")
+            # Use custom story or default
+            if initial_story and initial_story.strip():
+                starting_story = initial_story.strip()
+            else:
+                starting_story = ("You wake up in a mysterious place with no memory of how you got there. "
+                                "The air is thick with an otherworldly energy, and three paths stretch before you, "
+                                "each leading into the unknown. Your adventure begins now...")
             
-            starting_choices = [
-                "Take the left path through the shadowy forest",
-                "Follow the middle path toward the glowing light", 
-                "Choose the right path up the rocky mountain trail"
-            ]
+            # Use provided choices or defaults
+            if initial_choices and len(initial_choices) >= 3:
+                starting_choices = initial_choices[:3]
+            else:
+                starting_choices = [
+                    "Take the left path through the shadowy forest",
+                    "Follow the middle path toward the glowing light", 
+                    "Choose the right path up the rocky mountain trail"
+                ]
             
             default_character = {
                 "name": "Player",
@@ -180,6 +189,33 @@ class DatabaseManager:
             
         except Exception as e:
             print(f"Error listing saved games: {e}")
+            return []
+
+    def list_game_sessions(self, limit: int = 50) -> List[Dict]:
+        """List all game sessions ordered by most recent."""
+        try:
+            query = """
+                SELECT id, character_info, current_story, created_at, updated_at 
+                FROM game_sessions 
+                ORDER BY updated_at DESC 
+                LIMIT ?
+            """
+            results = self.execute_query(query, (limit,))
+            
+            sessions = []
+            for row in results:
+                char_info = json.loads(row['character_info']) if row['character_info'] else {}
+                sessions.append({
+                    'id': row['id'],
+                    'character_name': char_info.get('name', 'Player'),
+                    'story_preview': row['current_story'][:150] + '...' if len(row['current_story']) > 150 else row['current_story'],
+                    'created_at': row['created_at'],
+                    'updated_at': row['updated_at']
+                })
+            return sessions
+            
+        except Exception as e:
+            print(f"Error listing game sessions: {e}")
             return []
 
 

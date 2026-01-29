@@ -1,6 +1,6 @@
 import os
 from flask import Blueprint, request, jsonify, send_file, make_response
-from services.qwen_tts_service import qwen_tts_synth
+from services.deepgram_tts_service import deepgram_tts_synth
 
 
 narrate_bp = Blueprint('narrate', __name__)
@@ -8,15 +8,12 @@ narrate_bp = Blueprint('narrate', __name__)
 
 @narrate_bp.route('/narrate', methods=['POST'])
 def narrate():
-    """Generate narration audio for provided story text using Qwen3 TTS.
+    """Generate narration audio for provided story text using Deepgram Aura-2.
 
     Request JSON body:
-      - text: string (required)
-      - language: string (optional, e.g., 'English', 'Chinese')
-      - speaker: string (optional, default: 'Uncle Fu')
-      - instruct: string (optional, emotion/tone instruction)
+      - text: string (required, max 2000 characters)
 
-    Response: audio file (audio/wav) with caching.
+    Response: audio file (audio/mpeg) with caching.
     """
     try:
         data = request.get_json(silent=True) or {}
@@ -28,21 +25,8 @@ def narrate():
                 'error': 'text is required'
             }), 400
 
-        # Default to English for storytelling; Qwen3 supports auto-detection too
-        language = data.get('language') or 'English'
-        speaker = data.get('speaker') or 'uncle_fu'
-        
-        # Default storyteller tone: relaxed, narrative voice
-        default_instruct = "Speak in a relaxed, warm storyteller tone. Use a calm and engaging narrative voice, as if telling a captivating story by a fireside."
-        instruct = data.get('instruct') or default_instruct
-
-        # Synthesize (with on-disk caching inside synthesizer)
-        audio_path, mime = qwen_tts_synth.synthesize(
-            text=text,
-            language=language,
-            speaker=speaker,
-            instruct=instruct,
-        )
+        # Synthesize using Deepgram Aura-2 with Orpheus voice (with on-disk caching)
+        audio_path, mime = deepgram_tts_synth.synthesize(text=text)
 
         # Serve the generated file; allow browsers to start playback ASAP
         resp = make_response(send_file(
@@ -60,5 +44,3 @@ def narrate():
             'success': False,
             'error': f'TTS synthesis failed: {str(e)}'
         }), 500
-
-

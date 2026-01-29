@@ -10,28 +10,42 @@ game_bp = Blueprint('game', __name__)
 
 @game_bp.route('/start', methods=['POST'])
 def start_game():
-    """Start a new game session."""
+    """Start a new game session with optional custom story."""
     try:
-        # Get optional character customization from request
+        # Get optional character customization and custom story from request
         data = request.get_json() or {}
         character_name = data.get('character_name', 'Player')
+        initial_story = data.get('initial_story', '').strip()
         
         # Create new game state
         game_state = GameState()
         game_state.character_info['name'] = character_name
         
-        # Save initial state to database (this creates the session with starting story)
-        success = game_state.save_to_database()
+        # If custom story provided, generate choices for it using AI
+        custom_choices = None
+        custom_image_prompt = None
+        if initial_story:
+            custom_choices, custom_image_prompt = ai_service.generate_choices_for_story(
+                initial_story, game_state.character_info
+            )
+        
+        # Save initial state to database (with custom story if provided)
+        success = game_state.save_to_database(
+            initial_story=initial_story if initial_story else None,
+            initial_choices=custom_choices
+        )
         
         if success:
-            # Reload the game state from database to get the starting story and choices
-            # that were set by create_game_session()
+            # Reload the game state from database
             game_state = GameState.load_from_database(game_state.session_id)
             
             if game_state:
-                # Generate a starting image for the first scene
-                starting_image_prompt = "A mystical crossroads at the edge of an enchanted forest, with three diverging paths, one leading to shadowy trees, one towards a mysterious light, and one up a rocky mountain, fantasy digital art, cinematic lighting"
-                starting_image = image_service.generate_image(starting_image_prompt)
+                # Generate a starting image
+                if custom_image_prompt:
+                    starting_image = image_service.generate_image(custom_image_prompt)
+                else:
+                    starting_image_prompt = "A mystical crossroads at the edge of an enchanted forest, with three diverging paths, one leading to shadowy trees, one towards a mysterious light, and one up a rocky mountain, fantasy digital art, cinematic lighting"
+                    starting_image = image_service.generate_image(starting_image_prompt)
                 
                 return jsonify({
                     'success': True,
@@ -272,6 +286,25 @@ def list_saves():
         return jsonify({
             'success': False,
             'error': f'Error listing saved games: {str(e)}'
+        }), 500
+
+
+@game_bp.route('/sessions', methods=['GET'])
+def list_sessions():
+    """List all game sessions (play history)."""
+    try:
+        limit = request.args.get('limit', 50, type=int)
+        sessions = db_manager.list_game_sessions(limit)
+        
+        return jsonify({
+            'success': True,
+            'sessions': sessions
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Error listing sessions: {str(e)}'
         }), 500
 
 

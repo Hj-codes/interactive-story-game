@@ -64,7 +64,7 @@ class GameState:
             updated_at=data.get('updated_at')
         )
     
-    def save_to_database(self) -> bool:
+    def save_to_database(self, initial_story: str = None, initial_choices: list = None) -> bool:
         """Save the current game state to the database."""
         try:
             # Check if session exists
@@ -81,8 +81,13 @@ class GameState:
                     self.character_info
                 )
             else:
-                # Create new session
-                return db_manager.create_game_session(self.session_id, self.character_info)
+                # Create new session (with optional custom story)
+                return db_manager.create_game_session(
+                    self.session_id, 
+                    self.character_info,
+                    initial_story=initial_story,
+                    initial_choices=initial_choices
+                )
                 
         except Exception as e:
             print(f"Error saving game state to database: {e}")

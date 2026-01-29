@@ -1,14 +1,21 @@
-import { useRef } from 'react'
-import { motion } from 'framer-motion'
-import { Sword, Shield, Wand2 } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Sword, Shield, Wand2, Feather } from 'lucide-react'
 
 type Props = {
   disabled?: boolean
-  onStart: (name: string) => void
+  onStart: (name: string, initialStory?: string) => void
 }
 
 export function NamePrompt({ disabled, onStart }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
+  const [customStoryMode, setCustomStoryMode] = useState(false)
+  const [customStory, setCustomStory] = useState('')
+
+  const handleStart = () => {
+    const name = inputRef.current?.value.trim() || 'Player'
+    onStart(name, customStoryMode ? customStory : undefined)
+  }
 
   return (
     <motion.div
@@ -77,20 +84,64 @@ export function NamePrompt({ disabled, onStart }: Props) {
                        focus:border-[--fantasy-gold] focus:outline-none focus:ring-2 focus:ring-[--fantasy-gold]/20
                        transition-all"
             onKeyDown={(e) => {
-              if (e.key === 'Enter') onStart(inputRef.current?.value.trim() || 'Player')
+              if (e.key === 'Enter' && !customStoryMode) handleStart()
             }}
           />
 
+          {/* Custom Story Toggle */}
+          <div className="mt-4 flex items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => setCustomStoryMode(!customStoryMode)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all ${customStoryMode
+                  ? 'border-[--fantasy-gold] bg-[--fantasy-gold]/20 text-[--fantasy-gold]'
+                  : 'border-gray-600 text-gray-400 hover:border-gray-500 hover:text-gray-300'
+                }`}
+            >
+              <Feather className="w-4 h-4" />
+              <span className="text-sm font-medium">Write Your Own Story</span>
+            </button>
+          </div>
+
+          {/* Custom Story Textarea */}
+          <AnimatePresence>
+            {customStoryMode && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden"
+              >
+                <textarea
+                  value={customStory}
+                  onChange={(e) => setCustomStory(e.target.value)}
+                  placeholder="Write your own starting story... (e.g., 'You find yourself at the gates of an ancient castle, lightning flashing in the sky above...')"
+                  maxLength={1500}
+                  rows={5}
+                  className="w-full mt-4 bg-black/50 border-2 border-gray-700 rounded-lg px-4 py-3 text-white font-serif
+                             placeholder:text-gray-500 placeholder:italic text-sm
+                             focus:border-[--fantasy-gold] focus:outline-none focus:ring-2 focus:ring-[--fantasy-gold]/20
+                             transition-all resize-none"
+                />
+                <p className="text-gray-500 text-xs mt-1 text-right">
+                  {customStory.length}/1500 characters
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           <button
             className="btn-fantasy btn-fantasy-gold mt-6"
-            disabled={disabled}
-            onClick={() => onStart(inputRef.current?.value.trim() || 'Player')}
+            disabled={disabled || (customStoryMode && !customStory.trim())}
+            onClick={handleStart}
           >
-            Embark on Your Quest
+            {customStoryMode ? 'Begin Your Tale' : 'Embark on Your Quest'}
           </button>
 
           <p className="text-gray-600 text-xs mt-4 italic">
-            Leave blank to journey as "Player"
+            {customStoryMode
+              ? 'AI will generate choices based on your story'
+              : 'Leave blank to journey as "Player"'}
           </p>
         </div>
 
