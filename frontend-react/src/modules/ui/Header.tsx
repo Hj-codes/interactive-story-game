@@ -1,4 +1,4 @@
-import { Map, Save, FolderOpen, History, Plus, Settings, Clock } from 'lucide-react'
+import { Map, Save, FolderOpen, History, Plus, Sparkles, Clock } from 'lucide-react'
 
 type Props = {
   chapterCount: number
@@ -7,11 +7,24 @@ type Props = {
   onLoad: () => void
   onPlayHistory: () => void
   onToggleHistory: () => void
+  onRevealPersonality: () => void
   canSave: boolean
+  canRevealPersonality: boolean
   showHistory: boolean
 }
 
-export function Header({ chapterCount, onNew, onSave, onLoad, onPlayHistory, onToggleHistory, canSave, showHistory }: Props) {
+export function Header({
+  chapterCount,
+  onNew,
+  onSave,
+  onLoad,
+  onPlayHistory,
+  onToggleHistory,
+  onRevealPersonality,
+  canSave,
+  canRevealPersonality,
+  showHistory,
+}: Props) {
   const progressPercentage = Math.min((chapterCount / 10) * 100, 100)
 
   return (
@@ -58,8 +71,13 @@ export function Header({ chapterCount, onNew, onSave, onLoad, onPlayHistory, onT
         <button onClick={onToggleHistory} className={`p-2 transition-colors ${showHistory ? 'text-[--fantasy-gold]' : 'text-gray-500 hover:text-[--fantasy-gold]'}`} title="History">
           <History className="w-4 h-4" />
         </button>
-        <button className="p-2 text-gray-500 hover:text-[--fantasy-gold] transition-colors" title="Settings">
-          <Settings className="w-4 h-4" />
+        <button
+          onClick={onRevealPersonality}
+          disabled={!canRevealPersonality}
+          className="p-2 text-gray-500 hover:text-[--fantasy-gold] transition-colors disabled:opacity-40"
+          title="Reveal Personality"
+        >
+          <Sparkles className="w-4 h-4" />
         </button>
       </div>
     </header>

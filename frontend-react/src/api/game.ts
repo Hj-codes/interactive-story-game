@@ -5,6 +5,8 @@ import type {
   GameStateResponse,
   ListSavesResponse,
   HistoryResponse,
+  GetPersonalityResponse,
+  AnalyzePersonalityResponse,
 } from '@/types'
 
 export interface GameSession {
@@ -50,6 +52,14 @@ export const GameAPI = {
   },
   history(session_id: string) {
     return apiGet<HistoryResponse>(`/story/history/${session_id}`)
+  },
+  getPersonality(session_id: string) {
+    return apiGet<GetPersonalityResponse>(`/game/personality/${session_id}`)
+  },
+  analyzePersonality(session_id: string, force_refresh = false) {
+    return apiPost<AnalyzePersonalityResponse>(`/game/personality/${session_id}/analyze`, {
+      force_refresh,
+    })
   },
   narrate(text: string, opts?: { speaker?: string; speaker_wav?: string }) {
     return apiPostBlob('/narrate', { text, ...opts })

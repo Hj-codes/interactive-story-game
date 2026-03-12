@@ -1,8 +1,17 @@
 import requests
 import json
 import re
-from typing import Dict, List, Optional, Tuple
-from config import PERPLEXITY_API_KEY, PERPLEXITY_BASE_URL, STORY_LENGTH_WORDS, MAX_CONTEXT_LENGTH
+from typing import Any, Dict, List, Optional, Tuple
+from config import (
+    PERPLEXITY_API_KEY,
+    PERPLEXITY_BASE_URL,
+    PERPLEXITY_MODEL,
+    STORY_LENGTH_WORDS,
+    MAX_CONTEXT_LENGTH,
+    PERSONALITY_ANALYSIS_MODEL,
+)
+
+UNSET = object()
 
 
 class AIStoryService:
@@ -45,11 +54,17 @@ Format response as JSON:
   "image_prompt": "A vivid, artistic description of the scene for image generation, focusing on atmosphere and key visual elements"
 }}"""
 
-    def _make_api_request(self, prompt: str) -> Optional[Dict]:
+    def _make_api_request(
+        self,
+        prompt: str,
+        system_prompt: str = "You are a creative interactive fiction storyteller. Always respond with valid JSON.",
+        model: str = PERPLEXITY_MODEL,
+        fallback_response: Any = UNSET,
+    ) -> Optional[Dict]:
         """Make a request to the Perplexity API."""
         if not self.api_key or self.api_key == "your_api_key_here":
             # Return mock response for demo purposes
-            return self._get_mock_response(prompt)
+            return self._get_mock_response(prompt) if fallback_response is UNSET else fallback_response
         
         headers = {
             "Authorization": f"Bearer {self.api_key}",
@@ -57,11 +72,11 @@ Format response as JSON:
         }
         
         data = {
-            "model": "sonar",
+            "model": model,
             "messages": [
                 {
                     "role": "system",
-                    "content": "You are a creative interactive fiction storyteller. Always respond with valid JSON."
+                    "content": system_prompt
                 },
                 {
                     "role": "user", 
@@ -82,11 +97,30 @@ Format response as JSON:
             
         except requests.exceptions.RequestException as e:
             print(f"API request error: {e}")
-            return self._get_fallback_response()
+            return self._get_fallback_response() if fallback_response is UNSET else fallback_response
         
         except Exception as e:
             print(f"Error processing API response: {e}")
-            return self._get_fallback_response()
+            return self._get_fallback_response() if fallback_response is UNSET else fallback_response
+
+    def request_structured_json(
+        self,
+        *,
+        system_prompt: str,
+        user_prompt: str,
+        fallback: Optional[Dict] = None,
+        model: str = PERSONALITY_ANALYSIS_MODEL,
+    ) -> Optional[Dict]:
+        """Request structured JSON from the configured AI service."""
+        result = self._make_api_request(
+            user_prompt,
+            system_prompt=system_prompt,
+            model=model,
+            fallback_response=fallback,
+        )
+        if result is None:
+            return fallback
+        return result
     
     def _parse_json_response(self, content: str) -> Optional[Dict]:
         """Parse JSON response from AI, handling various formats."""
@@ -259,7 +293,12 @@ Format response as JSON:
             )
             
             # Make API request
-            response = self._make_api_request(prompt)
+            response = self._make_api_request(
+                prompt,
+                system_prompt="You are a creative interactive fiction storyteller. Always respond with valid JSON.",
+                model=PERPLEXITY_MODEL,
+                fallback_response=self._get_fallback_response(),
+            )
             
             if response and 'story' in response and 'choices' in response:
                 story = response['story']
@@ -339,7 +378,19 @@ Format response as JSON:
   "image_prompt": "A vivid, artistic description of the scene for image generation"
 }}"""
 
-            response = self._make_api_request(prompt)
+            response = self._make_api_request(
+                prompt,
+                system_prompt="You are a creative interactive fiction storyteller. Always respond with valid JSON.",
+                model=PERPLEXITY_MODEL,
+                fallback_response={
+                    "choices": [
+                        "Explore your surroundings",
+                        "Look for clues about what to do next",
+                        "Continue forward with determination"
+                    ],
+                    "image_prompt": "A mystical fantasy scene with magical atmosphere"
+                },
+            )
             
             if response and 'choices' in response:
                 choices = response['choices']

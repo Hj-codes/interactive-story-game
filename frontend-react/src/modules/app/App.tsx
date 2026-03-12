@@ -12,8 +12,10 @@ import { HistoryPanel } from '@/modules/ui/HistoryPanel'
 import { SaveDialog } from '@/modules/ui/SaveDialog'
 import { LoadDialog } from '@/modules/ui/LoadDialog'
 import { PlayHistory } from '@/modules/ui/PlayHistory'
+import { PersonalityRevealDialog } from '@/modules/ui/PersonalityRevealDialog'
 import { Toast, ToastProvider, useToast } from '@/modules/ui/Toast'
 import { NarrationPlayer } from '@/modules/ui/NarrationPlayer'
+import type { PersonalityProfile } from '@/types'
 
 export function App() {
   const [sessionId, setSessionId] = useState<string | null>(null)
@@ -28,6 +30,10 @@ export function App() {
   const [playHistoryOpen, setPlayHistoryOpen] = useState(false)
   const [chapterCount, setChapterCount] = useState(0)
   const [sceneImage, setSceneImage] = useState<string | null>(null)
+  const [personalityOpen, setPersonalityOpen] = useState(false)
+  const [personalityLoading, setPersonalityLoading] = useState(false)
+  const [personalityProfile, setPersonalityProfile] = useState<PersonalityProfile | null>(null)
+  const [personalityWarning, setPersonalityWarning] = useState<string | null>(null)
 
   const canInteract = useMemo(() => !!sessionId && !isLoading, [sessionId, isLoading])
   const { toasts, push } = useToast()
@@ -43,6 +49,9 @@ export function App() {
           setChoices(data.choices)
           setCharacter(data.character_info)
           setSceneImage(data.image || null)
+          setPersonalityProfile(null)
+          setPersonalityWarning(null)
+          setPersonalityOpen(false)
           GameAPI.history(data.session_id).then((h) => {
             if (h.success) {
               setHistory(h.choices_history)
@@ -79,6 +88,9 @@ export function App() {
         setChoices(data.choices)
         setCharacter(data.character_info)
         setSceneImage(data.image || null)
+        setPersonalityProfile(null)
+        setPersonalityWarning(null)
+        setPersonalityOpen(false)
         setChapterCount(0)
         const h = await GameAPI.history(data.session_id)
         if (h.success) setHistory(h.choices_history)
@@ -102,6 +114,9 @@ export function App() {
         setChoices(data.choices)
         setCharacter(data.character_info)
         setSceneImage(data.image || null)
+        setPersonalityProfile(null)
+        setPersonalityWarning(null)
+        setPersonalityOpen(false)
         const h = await GameAPI.history(sessionId)
         if (h.success) {
           setHistory(h.choices_history)
@@ -143,6 +158,9 @@ export function App() {
         setChoices(data.choices)
         setCharacter(data.character_info)
         setSceneImage(data.image || null)
+        setPersonalityProfile(null)
+        setPersonalityWarning(null)
+        setPersonalityOpen(false)
         const h = await GameAPI.history(data.session_id)
         if (h.success) {
           setHistory(h.choices_history)
@@ -167,6 +185,9 @@ export function App() {
     setHistory([])
     setChapterCount(0)
     setSceneImage(null)
+    setPersonalityProfile(null)
+    setPersonalityWarning(null)
+    setPersonalityOpen(false)
   }
 
   const onResumeSession = async (sessionId: string) => {
@@ -180,6 +201,9 @@ export function App() {
         setChoices(data.choices)
         setCharacter(data.character_info)
         setSceneImage(data.image || null)
+        setPersonalityProfile(null)
+        setPersonalityWarning(null)
+        setPersonalityOpen(false)
         const h = await GameAPI.history(data.session_id)
         if (h.success) {
           setHistory(h.choices_history)
@@ -193,6 +217,45 @@ export function App() {
       push({ title: 'Unable to resume session', variant: 'destructive' })
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const runPersonalityAnalysis = async (forceRefresh = false) => {
+    if (!sessionId) return
+    setPersonalityLoading(true)
+    try {
+      const res = await GameAPI.analyzePersonality(sessionId, forceRefresh)
+      if (res.success && res.profile) {
+        setPersonalityProfile(res.profile)
+        setPersonalityWarning(res.warning ?? null)
+      } else {
+        push({ title: res.error ?? 'Failed to analyze personality', variant: 'destructive' })
+      }
+    } catch {
+      push({ title: 'Unable to reveal personality', variant: 'destructive' })
+    } finally {
+      setPersonalityLoading(false)
+    }
+  }
+
+  const onRevealPersonality = async () => {
+    if (!sessionId) return
+    setPersonalityOpen(true)
+    setPersonalityWarning(null)
+    setPersonalityLoading(true)
+    try {
+      const cached = await GameAPI.getPersonality(sessionId)
+      if (cached.success && cached.has_profile && cached.profile) {
+        setPersonalityProfile(cached.profile)
+        if (!cached.is_stale) {
+          setPersonalityLoading(false)
+          return
+        }
+      }
+      await runPersonalityAnalysis(false)
+    } catch {
+      setPersonalityLoading(false)
+      push({ title: 'Unable to reveal personality', variant: 'destructive' })
     }
   }
 
@@ -219,7 +282,9 @@ export function App() {
             onLoad={() => setLoadOpen(true)}
             onPlayHistory={() => setPlayHistoryOpen(true)}
             onToggleHistory={() => setShowHistory((v) => !v)}
+            onRevealPersonality={() => void onRevealPersonality()}
             canSave={!!sessionId}
+            canRevealPersonality={!!sessionId}
             showHistory={showHistory}
           />
 
@@ -284,6 +349,14 @@ export function App() {
         <SaveDialog open={saveOpen} onOpenChange={setSaveOpen} onConfirm={onSave} />
         <LoadDialog open={loadOpen} onOpenChange={setLoadOpen} onSelect={onLoad} sessionId={sessionId ?? undefined} />
         <PlayHistory open={playHistoryOpen} onOpenChange={setPlayHistoryOpen} onSelect={onResumeSession} />
+        <PersonalityRevealDialog
+          open={personalityOpen}
+          loading={personalityLoading}
+          profile={personalityProfile}
+          warning={personalityWarning}
+          onOpenChange={setPersonalityOpen}
+          onRefresh={() => void runPersonalityAnalysis(true)}
+        />
 
         {toasts.map((t) => (
           <Toast key={t.id} {...t} />

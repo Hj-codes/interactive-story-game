@@ -25,7 +25,8 @@ def index():
         'endpoints': {
             'game': '/api/game/*',
             'story': '/api/story/*',
-            'narrate': '/api/narrate'
+            'narrate': '/api/narrate',
+            'personality': '/api/game/personality/*'
         }
     })
 
@@ -89,6 +90,8 @@ if __name__ == '__main__':
     print("  - POST /api/game/save - Save game")
     print("  - POST /api/game/load/<save_id> - Load game")
     print("  - GET /api/game/saves - List saved games")
+    print("  - GET /api/game/personality/<session_id> - Get cached personality profile")
+    print("  - POST /api/game/personality/<session_id>/analyze - Generate personality profile")
     print("  - POST /api/story/generate - Generate story")
     print("  - POST /api/narrate - Generate narration audio")
     print("  - GET /api/health - Health check")

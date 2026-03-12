@@ -218,6 +218,145 @@ class DatabaseManager:
             print(f"Error listing game sessions: {e}")
             return []
 
+    def get_personality_profile(self, session_id: str) -> Optional[Dict]:
+        """Retrieve a cached personality profile by session ID."""
+        try:
+            query = "SELECT * FROM personality_profiles WHERE session_id = ?"
+            results = self.execute_query(query, (session_id,))
+
+            if not results:
+                return None
+
+            row = results[0]
+            return {
+                'session_id': row['session_id'],
+                'history_fingerprint': row['history_fingerprint'],
+                'choices_analyzed': row['choices_analyzed'],
+                'analysis_version': row['analysis_version'],
+                'model_name': row['model_name'],
+                'status': row['status'],
+                'archetype': row['archetype'],
+                'summary': row['summary'],
+                'trait_scores': json.loads(row['trait_scores']) if row['trait_scores'] else {},
+                'evidence': json.loads(row['evidence']) if row['evidence'] else [],
+                'raw_response': json.loads(row['raw_response']) if row['raw_response'] else None,
+                'last_error': row['last_error'],
+                'created_at': row['created_at'],
+                'updated_at': row['updated_at'],
+            }
+
+        except Exception as e:
+            print(f"Error retrieving personality profile: {e}")
+            return None
+
+    def mark_personality_profile_processing(
+        self,
+        session_id: str,
+        history_fingerprint: str,
+        choices_analyzed: int,
+        model_name: str,
+        analysis_version: int,
+    ) -> bool:
+        """Mark a personality profile as in progress for a session."""
+        try:
+            timestamp = datetime.now().isoformat()
+            query = """
+                INSERT INTO personality_profiles (
+                    session_id, history_fingerprint, choices_analyzed, analysis_version,
+                    model_name, status, archetype, summary, trait_scores, evidence,
+                    raw_response, last_error, created_at, updated_at
+                )
+                VALUES (?, ?, ?, ?, ?, 'processing', '', '', '{}', '[]', NULL, NULL, ?, ?)
+                ON CONFLICT(session_id) DO UPDATE SET
+                    history_fingerprint = excluded.history_fingerprint,
+                    choices_analyzed = excluded.choices_analyzed,
+                    analysis_version = excluded.analysis_version,
+                    model_name = excluded.model_name,
+                    status = 'processing',
+                    archetype = '',
+                    summary = '',
+                    trait_scores = '{}',
+                    evidence = '[]',
+                    raw_response = NULL,
+                    last_error = NULL,
+                    updated_at = excluded.updated_at
+            """
+            params = (
+                session_id,
+                history_fingerprint,
+                choices_analyzed,
+                analysis_version,
+                model_name,
+                timestamp,
+                timestamp,
+            )
+            return self.execute_update(query, params) > 0
+
+        except Exception as e:
+            print(f"Error marking personality profile as processing: {e}")
+            return False
+
+    def upsert_personality_profile(
+        self,
+        session_id: str,
+        history_fingerprint: str,
+        choices_analyzed: int,
+        analysis_version: int,
+        model_name: str,
+        status: str,
+        archetype: str,
+        summary: str,
+        trait_scores: Dict,
+        evidence: List[Dict],
+        raw_response: Optional[Dict] = None,
+        last_error: Optional[str] = None,
+    ) -> bool:
+        """Create or update a personality profile."""
+        try:
+            timestamp = datetime.now().isoformat()
+            query = """
+                INSERT INTO personality_profiles (
+                    session_id, history_fingerprint, choices_analyzed, analysis_version,
+                    model_name, status, archetype, summary, trait_scores, evidence,
+                    raw_response, last_error, created_at, updated_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(session_id) DO UPDATE SET
+                    history_fingerprint = excluded.history_fingerprint,
+                    choices_analyzed = excluded.choices_analyzed,
+                    analysis_version = excluded.analysis_version,
+                    model_name = excluded.model_name,
+                    status = excluded.status,
+                    archetype = excluded.archetype,
+                    summary = excluded.summary,
+                    trait_scores = excluded.trait_scores,
+                    evidence = excluded.evidence,
+                    raw_response = excluded.raw_response,
+                    last_error = excluded.last_error,
+                    updated_at = excluded.updated_at
+            """
+            params = (
+                session_id,
+                history_fingerprint,
+                choices_analyzed,
+                analysis_version,
+                model_name,
+                status,
+                archetype,
+                summary,
+                json.dumps(trait_scores),
+                json.dumps(evidence),
+                json.dumps(raw_response) if raw_response is not None else None,
+                last_error,
+                timestamp,
+                timestamp,
+            )
+            return self.execute_update(query, params) > 0
+
+        except Exception as e:
+            print(f"Error upserting personality profile: {e}")
+            return False
+
 
 def init_database():
     """Initialize the database with required tables."""

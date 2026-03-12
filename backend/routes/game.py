@@ -2,8 +2,13 @@ from flask import Blueprint, request, jsonify
 from models.game_state import GameState
 from services.ai_service import ai_service
 from services.image_service import image_service
+from services.personality_service import (
+    personality_service,
+    PersonalityAnalysisError,
+    AnalysisInProgressError,
+    AIAnalysisUnavailableError,
+)
 from database.db_manager import db_manager
-import json
 
 game_bp = Blueprint('game', __name__)
 
@@ -305,6 +310,97 @@ def list_sessions():
         return jsonify({
             'success': False,
             'error': f'Error listing sessions: {str(e)}'
+        }), 500
+
+
+@game_bp.route('/personality/<session_id>', methods=['GET'])
+def get_personality_profile(session_id):
+    """Retrieve the cached personality profile for a session."""
+    try:
+        game_state = GameState.load_from_database(session_id)
+        if not game_state:
+            return jsonify({
+                'success': False,
+                'error': 'Game session not found',
+                'code': 'session_not_found'
+            }), 404
+
+        profile = personality_service.get_cached_profile(game_state)
+        if not profile:
+            return jsonify({
+                'success': True,
+                'has_profile': False
+            }), 200
+
+        return jsonify({
+            'success': True,
+            'has_profile': True,
+            'is_stale': profile.pop('is_stale', False),
+            'profile': profile
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Error retrieving personality profile: {str(e)}'
+        }), 500
+
+
+@game_bp.route('/personality/<session_id>/analyze', methods=['POST'])
+def analyze_personality(session_id):
+    """Generate or return a cached personality profile for a session."""
+    try:
+        game_state = GameState.load_from_database(session_id)
+        if not game_state:
+            return jsonify({
+                'success': False,
+                'error': 'Game session not found',
+                'code': 'session_not_found'
+            }), 404
+
+        if not game_state.has_personality_source_data():
+            return jsonify({
+                'success': False,
+                'error': 'At least one choice is required for personality analysis',
+                'code': 'no_choices'
+            }), 400
+
+        data = request.get_json(silent=True) or {}
+        force_refresh = bool(data.get('force_refresh', False))
+        result = personality_service.analyze_session(game_state, force_refresh=force_refresh)
+
+        response = {
+            'success': True,
+            'profile': result['profile'],
+            'cache_status': result.get('cache_status', result['profile'].get('cache_status', 'generated'))
+        }
+        if result.get('warning'):
+            response['warning'] = result['warning']
+
+        return jsonify(response), 200
+
+    except AnalysisInProgressError as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'code': 'analysis_in_progress'
+        }), 409
+    except AIAnalysisUnavailableError as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'code': 'ai_analysis_failed'
+        }), 502
+    except PersonalityAnalysisError as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'code': 'personality_analysis_failed'
+        }), 400
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Error analyzing personality: {str(e)}'
         }), 500
 
 

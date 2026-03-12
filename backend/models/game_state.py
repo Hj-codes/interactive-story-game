@@ -1,5 +1,6 @@
 import uuid
 import json
+import hashlib
 from datetime import datetime
 from typing import Dict, List, Optional, Any
 from database.db_manager import db_manager
@@ -216,6 +217,15 @@ class GameState:
         if not base:
             return ""
         return base[-MAX_CONTEXT_LENGTH:] if len(base) > MAX_CONTEXT_LENGTH else base
+
+    def has_personality_source_data(self) -> bool:
+        """Return whether the session has enough choice history for analysis."""
+        return len(self.choices_history) > 0
+
+    def get_history_fingerprint(self) -> str:
+        """Generate a stable fingerprint for the current choice history."""
+        serialized = json.dumps(self.choices_history, sort_keys=True, separators=(',', ':'))
+        return hashlib.sha256(serialized.encode('utf-8')).hexdigest()
 
 
 class SavedGame:
